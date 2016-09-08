@@ -5,22 +5,20 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorController;
 
 public class navigationClassTest extends OpMode {
-    navigationPID testPID;
+    navigationController testNavigator;
     DcMotor leftMotor;
     DcMotor rightMotor;
-
-    int moveStep = 0;
 
     //1: 1 = moveForward, 2 = moveBackward, 3 = rotateCW, 4 = rotateCCW, 5 = end navigation
     //2: Tp: the speed at which the robot goes when moving in the correct direction.
     //3: Either the wanted angle, or the goal distance in inches.
     double[][] movementArray = new double[][]{
            //_,______,______}
-            {1,  0.25,    12},
-            {2, -0.25,   -12},
-            {3,  0.25,    90},
-            {4,  0.25,   -90},
-            {5,     0,     0}
+            {1,  0.25,    12},  //Move forward 12 inches at 1/4 power (step = 0, type = 1)
+            {2, -0.25,   -12},  //Move backward 12 inches at 1/4 power (step = 1, type = 2)
+            {3,  0.25,    90},  //Rotate CW to 90 degrees at 1/4 power (step = 2, type = 3)
+            {4,  0.25,   -90},  //Rotate CCW to -90 degrees at 1/4 power (step = 3, type = 4)
+            {5,     0,     0}   //Stop (step = 4, type = 5)
     };
 
     @Override
@@ -29,8 +27,8 @@ public class navigationClassTest extends OpMode {
         rightMotor = hardwareMap.dcMotor.get("RM");
         rightMotor.setDirection(DcMotor.Direction.REVERSE);
 
-        testPID = new navigationPID(hardwareMap, "AG", leftMotor, rightMotor);
-        testPID.tuneGains(0.015, 0, 0);
+        testNavigator = new navigationController(movementArray, hardwareMap, "AG", leftMotor, rightMotor);
+        testNavigator.tuneGains(0.015, 0, 0);
 
         telemetry.addData("Status", "Tuning done");
 
@@ -44,23 +42,15 @@ public class navigationClassTest extends OpMode {
 
     @Override
     public void start() {
-        testPID.initialize();
+        testNavigator.initialize();
         telemetry.addData("Status", "Initialization done");
     }
 
     @Override
     public void loop() {
-        telemetry.addData("moveStep", moveStep);
-
-        boolean sendValue = testPID.readyForNewCommand();
-
-        telemetry.addData("readyForNewCommand", sendValue);
-
-        if (sendValue) {
-            testPID.move((int) movementArray[moveStep][0], movementArray[moveStep][1], movementArray[moveStep][2]);
-            telemetry.addData("Array position", movementArray[moveStep][0] + ", " + movementArray[moveStep][1] + ", " + movementArray[moveStep][2]);
-
-            moveStep+=1;
-        }
+        testNavigator.loopNavigation();
+        telemetry.addData("Current navigation step", testNavigator.navigationStep());
+        telemetry.addData("Current navigation type", testNavigator.navigationType());
+        telemetry.addData("Current Adafruit Heading", testNavigator.currentHeading());
     }
 }
