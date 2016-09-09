@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorController;
 
 public class navigationClassTest extends OpMode {
-    navigationController testNavigator;
+    navigationPID testNavigator;
     DcMotor leftMotor;
     DcMotor rightMotor;
 
@@ -13,12 +13,13 @@ public class navigationClassTest extends OpMode {
     //2: Tp: the speed at which the robot goes when moving in the correct direction.
     //3: Either the wanted angle, or the goal distance in inches.
     double[][] movementArray = new double[][]{
-           //_,______,______}
-            {1,  0.25,    12},  //Move forward 12 inches at 1/4 power (step = 0, type = 1)
-            {2, -0.25,   -12},  //Move backward 12 inches at 1/4 power (step = 1, type = 2)
-            {3,  0.25,    90},  //Rotate CW to 90 degrees at 1/4 power (step = 2, type = 3)
-            {4,  0.25,   -90},  //Rotate CCW to -90 degrees at 1/4 power (step = 3, type = 4)
-            {5,     0,     0}   //Stop (step = 4, type = 5)
+            //_,______,______}
+            {1,   0.15,    12}, //Move forward 12 inches at 15% power
+            {2,  -0.15,   -12}, //Move backward 12 inches at 15% power
+            {3,   0.15,    90}, //Rotate CW to 90 degrees at 15% power
+            {4,   0.15,   -90}, //Rotate CCW to -90 degrees at 15% power
+
+            {5,      0,     0} //Stop all movements
     };
 
     @Override
@@ -27,8 +28,8 @@ public class navigationClassTest extends OpMode {
         rightMotor = hardwareMap.dcMotor.get("RM");
         rightMotor.setDirection(DcMotor.Direction.REVERSE);
 
-        testNavigator = new navigationController(movementArray, hardwareMap, "AG", leftMotor, rightMotor);
-        testNavigator.tuneGains(0.015, 0, 0);
+        testNavigator = new navigationPID(movementArray, hardwareMap, "AG", leftMotor, rightMotor);
+        testNavigator.tuneGains(0.05, 0, 0.1);
 
         telemetry.addData("Status", "Tuning done");
 
@@ -43,14 +44,16 @@ public class navigationClassTest extends OpMode {
     @Override
     public void start() {
         testNavigator.initialize();
-        telemetry.addData("Status", "Initialization done");
     }
 
     @Override
     public void loop() {
         testNavigator.loopNavigation();
+
         telemetry.addData("Current navigation step", testNavigator.navigationStep());
         telemetry.addData("Current navigation type", testNavigator.navigationType());
         telemetry.addData("Current Adafruit Heading", testNavigator.currentHeading());
+        telemetry.addData("Left", leftMotor.getCurrentPosition());
+        telemetry.addData("Right", rightMotor.getCurrentPosition());
     }
 }
