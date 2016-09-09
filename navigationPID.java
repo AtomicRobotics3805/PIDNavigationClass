@@ -9,7 +9,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.Range;
 
 
-public final class navigationController {
+public final class navigationPID {
     private AdafruitIMU AdafruitGyro; //Instance of AdafruitIMU
     private volatile double[] rollAngle = new double[2], pitchAngle = new double[2], yawAngle = new double[2];  //Array to store IMU's output
 
@@ -33,7 +33,7 @@ public final class navigationController {
     private int encoderPositionReference; //Variable to use as reference for moveForward and moveBackward
 
     //Constructor
-    public navigationController(double [][] movementCommandArray, HardwareMap currentIMUHWmap, String configuredIMUname, DcMotor leftMotor, DcMotor rightMotor) {
+    public navigationPID(double [][] movementCommandArray, HardwareMap currentIMUHWmap, String configuredIMUname, DcMotor leftMotor, DcMotor rightMotor) {
         //Map the IMU instance pointer to the actual hardware
         try {
             AdafruitGyro = new AdafruitIMU(currentIMUHWmap, configuredIMUname, (byte) (AdafruitIMU.BNO055_ADDRESS_A * 2),
@@ -65,6 +65,8 @@ public final class navigationController {
     }
 
     public void loopNavigation() {
+        AdafruitGyro.getIMUGyroAngles(rollAngle, pitchAngle, yawAngle);
+
         move((int) movementArray[movementArrayStep][0], movementArray[movementArrayStep][1], movementArray[movementArrayStep][2]);
     }
 
@@ -78,6 +80,10 @@ public final class navigationController {
 
     public double currentHeading() {
         return yawAngle[0];
+    }
+
+    public void forceNextMovement() {
+        movementArrayStep++;
     }
 
     //**********Private methods**********
@@ -97,7 +103,8 @@ public final class navigationController {
                 rotateCCW(goalValue, Tp);
                 break;
             case 5:
-                //End of navigation
+                leftMotor.setPower(0);
+                rightMotor.setPower(0);
                 break;
         }
     }
@@ -105,7 +112,7 @@ public final class navigationController {
     private void moveForward(double goalDistanceInch, double Tp) { //Movement val == 1
         int distanceTraveled = (leftMotor.getCurrentPosition() + rightMotor.getCurrentPosition()) / 2;
 
-        if (distanceTraveled > (encoderTicksPerInch * goalDistanceInch) + encoderPositionReference) {
+        if (distanceTraveled < convertInchesToEncoderTicks(goalDistanceInch) + encoderPositionReference) {
             loopPID(Tp);
         } else {
             nextMovement();
@@ -115,7 +122,7 @@ public final class navigationController {
     private void moveBackward(double goalDistanceInch, double Tp) { //Movement val == 1
         int distanceTraveled = (leftMotor.getCurrentPosition() + rightMotor.getCurrentPosition()) / 2;
 
-        if (distanceTraveled < (encoderTicksPerInch * goalDistanceInch) + encoderPositionReference) {
+        if (distanceTraveled > convertInchesToEncoderTicks(goalDistanceInch) + encoderPositionReference) {
             loopPID(Tp);
         } else {
             nextMovement();
@@ -124,7 +131,7 @@ public final class navigationController {
 
     private void rotateCW(double goalAngle, double Tp) { //Movement val == 3
         setPoint = goalAngle;
-        if (yawAngle[0] > setPoint) {
+        if (yawAngle[0] < setPoint) {
             loopPID(Tp);
         } else {
             nextMovement();
@@ -133,11 +140,15 @@ public final class navigationController {
 
     private void rotateCCW(double goalAngle, double Tp) { //Movement val == 4
         setPoint = goalAngle;
-        if (yawAngle[0] < setPoint) {
+        if (yawAngle[0] > setPoint) {
             loopPID(Tp);
         } else {
             nextMovement();
         }
+    }
+
+    private double convertInchesToEncoderTicks(double inches) {
+        return encoderTicksPerInch * inches;
     }
 
     private void nextMovement() {
@@ -147,21 +158,17 @@ public final class navigationController {
         movementArrayStep++;
     }
 
-    private double loopPID(double Tp) {
-        AdafruitGyro.getIMUGyroAngles(rollAngle, pitchAngle, yawAngle);
-
+    private void loopPID(double Tp) {
         double error = yawAngle[0] - setPoint;
         integral += error;
         double derivative = error - preError;
         double output = (Kp * error) + (Ki * integral) + (Kd * derivative);
 
-        double leftOut = Range.clip(Tp - output, -0.5, 0.5);
-        double rightOut = Range.clip(Tp + output, -0.5, 0.5);
+        double leftOut = Range.clip(Tp + output, -0.5, 0.5);
+        double rightOut = Range.clip(Tp - output, -0.5, 0.5);
 
         leftMotor.setPower(leftOut);
         rightMotor.setPower(rightOut);
         preError = error;
-
-        return output;
     }
 }
