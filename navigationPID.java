@@ -1,11 +1,10 @@
-package com.qualcomm.ftcrobotcontroller.opmodes.FTC3805;
+package org.firstinspires.ftc.teamcode;
 
 import android.util.Log;
 
-import com.qualcomm.ftcrobotcontroller.opmodes.AdafruitIMU;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.Range;
 
 
@@ -28,16 +27,17 @@ public final class navigationPID {
     private double preError;
 
 
-    private int encoderTicksPerRev = 1440; //Change this to match the specs of the motors being used
+    private int encoderTicksPerRev = 1440 * 3 / 4; //Change this to match the specs of the motors being used
     private double encoderTicksPerInch = encoderTicksPerRev / (Math.PI * 3); //Variable to convert encoder ticks to inches
     private int encoderPositionReference; //Variable to use as reference for moveForward and moveBackward
 
     //Constructor
-    public navigationPID(double [][] movementCommandArray, HardwareMap currentIMUHWmap, String configuredIMUname, DcMotor leftMotor, DcMotor rightMotor) {
+    public navigationPID(double[][] movementCommandArray, OpMode opmode, String configuredIMUname, DcMotor leftMotor, DcMotor rightMotor) {
         //Map the IMU instance pointer to the actual hardware
         try {
-            AdafruitGyro = new AdafruitIMU(currentIMUHWmap, configuredIMUname, (byte) (AdafruitIMU.BNO055_ADDRESS_A * 2),
-                    (byte) AdafruitIMU.OPERATION_MODE_IMU);
+            AdafruitGyro = new AdafruitIMU(opmode.hardwareMap, configuredIMUname
+                    , (byte) (AdafruitIMU.BNO055_ADDRESS_A)
+                    , (byte) AdafruitIMU.OPERATION_MODE_IMU);
         } catch (RobotCoreException e) {
             Log.i("FtcRobotController", "Exception: " + e.getMessage());
         }
@@ -131,7 +131,7 @@ public final class navigationPID {
 
     private void rotateCW(double goalAngle, double Tp) { //Movement val == 3
         setPoint = goalAngle;
-        if (yawAngle[0] < setPoint) {
+        if (yawAngle[0] > setPoint) {
             loopPID(Tp);
         } else {
             nextMovement();
@@ -140,7 +140,7 @@ public final class navigationPID {
 
     private void rotateCCW(double goalAngle, double Tp) { //Movement val == 4
         setPoint = goalAngle;
-        if (yawAngle[0] > setPoint) {
+        if (yawAngle[0] < setPoint) {
             loopPID(Tp);
         } else {
             nextMovement();
