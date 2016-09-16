@@ -1,9 +1,12 @@
-package com.qualcomm.ftcrobotcontroller.opmodes.FTC3805;
+package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorController;
 
+
+@Autonomous(name = "Navigation IMU")
+//@Disabled                            // Uncomment this to add to the opmode list
 public class navigationClassTest extends OpMode {
     navigationPID testNavigator;
     DcMotor leftMotor;
@@ -13,13 +16,13 @@ public class navigationClassTest extends OpMode {
     //2: Tp: the speed at which the robot goes when moving in the correct direction.
     //3: Either the wanted angle, or the goal distance in inches.
     double[][] movementArray = new double[][]{
-            //_,______,______}
-            {1,   0.15,    12}, //Move forward 12 inches at 15% power
-            {2,  -0.15,   -12}, //Move backward 12 inches at 15% power
-            {3,   0.15,    90}, //Rotate CW to 90 degrees at 15% power
-            {4,   0.15,   -90}, //Rotate CCW to -90 degrees at 15% power
-
-            {5,      0,     0} //Stop all movements
+           //_,______,______}
+            {1,  0.15,    36},
+            {3,  0.15,   -45},
+            {1,  0.15,    12},
+            {3,  0.15,   -90},
+            {1,   0.1,    12},
+            {5,     0,     0} //Stop all movements
     };
 
     @Override
@@ -28,17 +31,17 @@ public class navigationClassTest extends OpMode {
         rightMotor = hardwareMap.dcMotor.get("RM");
         rightMotor.setDirection(DcMotor.Direction.REVERSE);
 
-        testNavigator = new navigationPID(movementArray, hardwareMap, "AG", leftMotor, rightMotor);
-        testNavigator.tuneGains(0.05, 0, 0.1);
+        testNavigator = new navigationPID(movementArray, this, "AG", leftMotor, rightMotor);
+        testNavigator.tuneGains(0.01, 0, 0.02);
 
         telemetry.addData("Status", "Tuning done");
 
         //Reset the motor encoders
-        leftMotor.setMode(DcMotorController.RunMode.RESET_ENCODERS);
-        rightMotor.setMode(DcMotorController.RunMode.RESET_ENCODERS);
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        leftMotor.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
-        rightMotor.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
+        leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
     }
 
     @Override
