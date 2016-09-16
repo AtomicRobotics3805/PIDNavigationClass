@@ -1,16 +1,13 @@
 package org.firstinspires.ftc.teamcode;
 
-import android.util.Log;
-
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
 
 
 public final class navigationPID {
     private AdafruitIMU AdafruitGyro; //Instance of AdafruitIMU
-    private volatile double[] rollAngle = new double[2], pitchAngle = new double[2], yawAngle = new double[2];  //Array to store IMU's output
+    private double yawAngle;  //Array to store IMU's output
 
     private DcMotor leftMotor; //Instance of DcMotor
     private DcMotor rightMotor; //Instance of DcMotor
@@ -33,14 +30,7 @@ public final class navigationPID {
 
     //Constructor
     public navigationPID(double[][] movementCommandArray, OpMode opmode, String configuredIMUname, DcMotor leftMotor, DcMotor rightMotor) {
-        //Map the IMU instance pointer to the actual hardware
-        try {
-            AdafruitGyro = new AdafruitIMU(opmode.hardwareMap, configuredIMUname
-                    , (byte) (AdafruitIMU.BNO055_ADDRESS_A)
-                    , (byte) AdafruitIMU.OPERATION_MODE_IMU);
-        } catch (RobotCoreException e) {
-            Log.i("FtcRobotController", "Exception: " + e.getMessage());
-        }
+        AdafruitGyro = new AdafruitIMU(opmode, configuredIMUname);
 
         //Assign the DcMotor instances to those of the main class
         this.leftMotor = leftMotor;
@@ -65,7 +55,7 @@ public final class navigationPID {
     }
 
     public void loopNavigation() {
-        AdafruitGyro.getIMUGyroAngles(rollAngle, pitchAngle, yawAngle);
+        yawAngle = AdafruitGyro.getYaw();
 
         move((int) movementArray[movementArrayStep][0], movementArray[movementArrayStep][1], movementArray[movementArrayStep][2]);
     }
@@ -79,7 +69,7 @@ public final class navigationPID {
     }
 
     public double currentHeading() {
-        return yawAngle[0];
+        return yawAngle;
     }
 
     public void forceNextMovement() {
@@ -131,7 +121,7 @@ public final class navigationPID {
 
     private void rotateCW(double goalAngle, double Tp) { //Movement val == 3
         setPoint = goalAngle;
-        if (yawAngle[0] > setPoint) {
+        if (yawAngle > setPoint) {
             loopPID(Tp);
         } else {
             nextMovement();
@@ -140,7 +130,7 @@ public final class navigationPID {
 
     private void rotateCCW(double goalAngle, double Tp) { //Movement val == 4
         setPoint = goalAngle;
-        if (yawAngle[0] < setPoint) {
+        if (yawAngle < setPoint) {
             loopPID(Tp);
         } else {
             nextMovement();
@@ -159,7 +149,7 @@ public final class navigationPID {
     }
 
     private void loopPID(double Tp) {
-        double error = yawAngle[0] - setPoint;
+        double error = yawAngle - setPoint;
         integral += error;
         double derivative = error - preError;
         double output = (Kp * error) + (Ki * integral) + (Kd * derivative);
