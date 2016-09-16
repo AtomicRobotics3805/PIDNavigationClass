@@ -1,0 +1,24 @@
+package org.firstinspires.ftc.teamcode;
+
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+
+@Autonomous(name = "IMU Test")
+public class ImuTest extends OpMode {
+    AdafruitIMU bno055;
+
+    @Override
+    public void init() {
+        bno055 = new AdafruitIMU(this, "AG");
+    }
+
+    @Override
+    public void start() {
+        bno055.startIMU();
+    }
+
+    @Override
+    public void loop() {
+        telemetry.addData("Yaw", bno055.getYaw());
+    }
+}
