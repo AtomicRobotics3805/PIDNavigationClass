@@ -24,12 +24,11 @@ public final class navigationPID {
     private double preError;
 
 
-    private int encoderTicksPerRev = 1440 * 3 / 4; //Change this to match the specs of the motors being used
-    private double encoderTicksPerInch = encoderTicksPerRev / (Math.PI * 3); //Variable to convert encoder ticks to inches
+    private double encoderTicksPerInch;//= encoderTicksPerRev / (Math.PI * 3); //Variable to convert encoder ticks to inches
     private int encoderPositionReference; //Variable to use as reference for moveForward and moveBackward
 
     //Constructor
-    public navigationPID(double[][] movementCommandArray, OpMode opmode, String configuredIMUname, DcMotor leftMotor, DcMotor rightMotor) {
+    public navigationPID(double[][] movementCommandArray, OpMode opmode, String configuredIMUname, DcMotor leftMotor, DcMotor rightMotor, int encoderTicksPerRev, double wheelDiameter) {
         AdafruitGyro = new AdafruitIMU(opmode, configuredIMUname);
 
         //Assign the DcMotor instances to those of the main class
@@ -37,6 +36,8 @@ public final class navigationPID {
         this.rightMotor = rightMotor;
 
         movementArray = movementCommandArray;
+
+        encoderTicksPerInch = encoderTicksPerRev / (Math.PI * wheelDiameter);
     }
 
     //**********Public methods***********
