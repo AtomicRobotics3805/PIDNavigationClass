@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
@@ -32,7 +31,7 @@ public class navigationClassTest extends OpMode {
         rightMotor = hardwareMap.dcMotor.get("RM");
         rightMotor.setDirection(DcMotor.Direction.REVERSE);
 
-        testNavigator = new navigationPID(movementArray, this, "AG", leftMotor, rightMotor);
+        testNavigator = new navigationPID(movementArray, this, "AG", leftMotor, rightMotor, 1440 * 3 / 4, 3);
         testNavigator.tuneGains(0.01, 0, 0.02);
 
         telemetry.addData("Status", "Tuning done");
