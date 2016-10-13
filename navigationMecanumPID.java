@@ -190,23 +190,6 @@ public final class navigationMecanumPID {
         movementArrayStep++;
     }
 
-    /*private void loopPID(double Tp) {
-        double error = yawAngle - setPoint;
-        integral += error;
-        double derivative = error - preError;
-        double output = (Kp * error) + (Ki * integral) + (Kd * derivative);
-
-        double leftOut = Range.clip(Tp + output, -0.5, 0.5);
-        double rightOut = Range.clip(Tp - output, -0.5, 0.5);
-
-
-        rightBack.setPower(rightOut);
-        rightFront.setPower(rightOut);
-        leftFront.setPower(leftOut);
-        leftBack.setPower(leftOut);
-        preError = error;
-    }*/
-
     private void loopPID(double TpForwards, double TpSlide) {
         double error = yawAngle - setPoint;
         integral += error;
