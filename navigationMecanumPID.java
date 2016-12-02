@@ -4,6 +4,8 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.teamcode.Autonomous.RED_AutonomousProgramLeaguePlay_V4;
+
 
 public final class navigationMecanumPID {
     private AdafruitIMU AdafruitGyro; //Instance of AdafruitIMU
@@ -25,6 +27,9 @@ public final class navigationMecanumPID {
     private double integral = 0;
     private double preError;
 
+    //Variables for rotateToAngle
+    private double integralRTA = 0;
+    private double preErrorRTA;
 
     private double encoderTicksPerInch;//= encoderTicksPerRev / (Math.PI * 3); //Variable to convert encoder ticks to inches
     private int encoderPositionReference; //Variable to use as reference for moveForward and moveBackward
@@ -78,11 +83,30 @@ public final class navigationMecanumPID {
     }
 
     public void forceNextMovement() {
-        movementArrayStep++;
+        nextMovement();
     }
 
     public void moveNoStop(double TpForwards, double TpSlide) {
         loopPID(TpForwards, TpSlide);
+    }
+
+    public boolean rotateToAngle(double angle, OpMode opMode) {
+        if (yawAngle > angle + 0.5 && yawAngle < angle - 0.5) { //Check if in +- 1 degree margin
+            return true;
+        } else {
+            double error = yawAngle - angle;
+            integralRTA += error;
+            double derivative = error - preError;
+            double output = Range.clip((Kp * error) + (Ki * integral) + (Kd * derivative), -0.5, 0.5);
+            opMode.telemetry.addData("Output", output);
+
+            rightFront.setPower(-output);
+            rightBack.setPower(-output);
+            leftFront.setPower(output);
+            leftBack.setPower(output);
+            preErrorRTA = error;
+            return false;
+        }
     }
 
     //**********Private methods**********
