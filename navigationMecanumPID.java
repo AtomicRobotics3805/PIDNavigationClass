@@ -4,8 +4,6 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.teamcode.Autonomous.RED_AutonomousProgramLeaguePlay_V4;
-
 
 public final class navigationMecanumPID {
     private AdafruitIMU AdafruitGyro; //Instance of AdafruitIMU
@@ -27,15 +25,15 @@ public final class navigationMecanumPID {
     private double integral = 0;
     private double preError;
 
-    //Variables for rotateToAngle
-    private double integralRTA = 0;
-    private double preErrorRTA;
-
     private double encoderTicksPerInch;//= encoderTicksPerRev / (Math.PI * 3); //Variable to convert encoder ticks to inches
     private int encoderPositionReference; //Variable to use as reference for moveForward and moveBackward
+    private OpMode opmode;
+
+    private double completedHeading;
 
     //Constructor
     public navigationMecanumPID(double[][] movementCommandArray, OpMode opmode, String configuredIMUname, DcMotor leftFront, DcMotor rightFront, DcMotor leftBack, DcMotor rightBack, int encoderTicksPerRev, double wheelDiameter) {
+        this.opmode = opmode;
         AdafruitGyro = new AdafruitIMU(opmode, configuredIMUname);
 
         //Assign the DcMotor instances to those of the main class
@@ -67,6 +65,9 @@ public final class navigationMecanumPID {
     public void loopNavigation() {
         yawAngle = AdafruitGyro.getYaw();
 
+        opmode.telemetry.addData("Heading, Goal", "%1$s, %2$s", currentHeading(), movementArray[movementArrayStep][2]);
+        opmode.telemetry.addData("Completed Heading", completedHeading);
+
         move((int) movementArray[movementArrayStep][0], movementArray[movementArrayStep][1], movementArray[movementArrayStep][2]);
     }
 
@@ -87,24 +88,24 @@ public final class navigationMecanumPID {
     }
 
     public void moveNoStop(double TpForwards, double TpSlide) {
-        loopPID(TpForwards, TpSlide);
+        loopPID(TpForwards, TpSlide, TpForwards >= TpSlide ? TpForwards : TpSlide);
     }
 
-    public boolean rotateToAngle(double angle, OpMode opMode) {
-        if (yawAngle > angle + 0.5 && yawAngle < angle - 0.5) { //Check if in +- 1 degree margin
+    public boolean rotateToAngle(double angle, double TpTurn) {
+        yawAngle = AdafruitGyro.getYaw();
+        if (yawAngle + 0.5 >= angle && yawAngle - 0.5 <= angle) {
             return true;
         } else {
-            double error = yawAngle - angle;
-            integralRTA += error;
+            double error = yawAngle - setPoint;
+            integral += error;
             double derivative = error - preError;
-            double output = Range.clip((Kp * error) + (Ki * integral) + (Kd * derivative), -0.5, 0.5);
-            opMode.telemetry.addData("Output", output);
+            double output = Range.clip((Kp * error) + (Ki * integral) + (Kd * derivative), -Math.abs(TpTurn), Math.abs(TpTurn));
 
             rightFront.setPower(-output);
             rightBack.setPower(-output);
             leftFront.setPower(output);
             leftBack.setPower(output);
-            preErrorRTA = error;
+            preError = error;
             return false;
         }
     }
@@ -143,7 +144,7 @@ public final class navigationMecanumPID {
         int distanceTraveled = (leftFront.getCurrentPosition() + rightBack.getCurrentPosition()) / 2;
 
         if (distanceTraveled < convertInchesToEncoderTicks(goalDistanceInch) + encoderPositionReference) {
-            loopPID(Tp, 0);
+            loopPID(Tp, 0, Tp);
         } else {
             nextMovement();
         }
@@ -153,7 +154,7 @@ public final class navigationMecanumPID {
         int distanceTraveled = (leftFront.getCurrentPosition() + rightBack.getCurrentPosition()) / 2;
 
         if (distanceTraveled > convertInchesToEncoderTicks(goalDistanceInch) + encoderPositionReference) {
-            loopPID(Tp, 0);
+            loopPID(Tp, 0, Tp);
         } else {
             nextMovement();
         }
@@ -162,7 +163,7 @@ public final class navigationMecanumPID {
     private void rotateCW(double goalAngle, double Tp) { //Movement val == 3
         setPoint = goalAngle;
         if (yawAngle < setPoint) {
-            loopPID(0, 0);
+            loopPID(0, 0, Tp);
         } else {
             nextMovement();
         }
@@ -171,7 +172,7 @@ public final class navigationMecanumPID {
     private void rotateCCW(double goalAngle, double Tp) { //Movement val == 4
         setPoint = goalAngle;
         if (yawAngle > setPoint) {
-            loopPID(0, 0);
+            loopPID(0, 0, Tp);
         } else {
             nextMovement();
         }
@@ -181,7 +182,7 @@ public final class navigationMecanumPID {
         int distanceTraveled = (leftFront.getCurrentPosition() + rightBack.getCurrentPosition()) / 2;
 
         if (distanceTraveled < convertInchesToEncoderTicks(goalDistanceInch) + encoderPositionReference) {
-            loopPID(0, Tp);
+            loopPID(0, Tp, Tp);
         } else {
             nextMovement();
         }
@@ -191,7 +192,7 @@ public final class navigationMecanumPID {
         int distanceTraveled = (leftFront.getCurrentPosition() + rightBack.getCurrentPosition()) / 2;
 
         if (distanceTraveled > convertInchesToEncoderTicks(goalDistanceInch) + encoderPositionReference) {
-            loopPID(0, Tp);
+            loopPID(0, Tp, Tp);
         } else {
             nextMovement();
         }
@@ -210,15 +211,16 @@ public final class navigationMecanumPID {
 
     private void nextMovement() {
         fullStop();
+        completedHeading = yawAngle;
         encoderPositionReference = (leftFront.getCurrentPosition() + rightBack.getCurrentPosition()) / 2;
         movementArrayStep++;
     }
 
-    private void loopPID(double TpForwards, double TpSlide) {
+    private void loopPID(double TpForwards, double TpSlide, double TpTurn) {
         double error = yawAngle - setPoint;
         integral += error;
         double derivative = error - preError;
-        double output = Range.clip((Kp * error) + (Ki * integral) + (Kd * derivative), -0.5, 0.5);
+        double output = Range.clip((Kp * error) + (Ki * integral) + (Kd * derivative), -Math.abs(TpTurn), Math.abs(TpTurn));
 
         rightFront.setPower(TpForwards - output - TpSlide);
         rightBack.setPower(TpForwards - output + TpSlide);
