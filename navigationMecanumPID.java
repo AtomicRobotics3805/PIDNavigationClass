@@ -88,6 +88,7 @@ public final class navigationMecanumPID {
     }
 
     public void moveNoStop(double TpForwards, double TpSlide) {
+        yawAngle = AdafruitGyro.getYaw();
         loopPID(TpForwards, TpSlide, TpForwards >= TpSlide ? TpForwards : TpSlide);
     }
 
